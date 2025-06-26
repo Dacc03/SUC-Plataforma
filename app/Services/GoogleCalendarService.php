@@ -15,6 +15,12 @@ class GoogleCalendarService
     public function __construct()
     {
         $this->client = new Google_Client();
+         // Deshabilita la verificación SSL en entornos locales para evitar
+                // errores "cURL error 60" cuando el sistema no cuenta con los
+                // certificados de autoridad instalados. No debe usarse en producción.
+                if (config('app.env') !== 'production') {
+                    $this->client->setHttpClient(new \GuzzleHttp\Client(['verify' => false]));
+                }
         $credentialsPath = storage_path('app/google-calendar/credentials.json');
         $tokenPath = storage_path('app/google-calendar/token.json');
 

@@ -115,90 +115,108 @@
     });
 
     function inicializarFormularioReunion() {
-        const rolSelect = document.getElementById('rol_destinatario');
-        const usuarioSelect = document.getElementById('destinatario_id');
+            const rolSelect = document.getElementById('rol_destinatario');
+            const usuarioSelect = document.getElementById('destinatario_id');
 
-        if (!rolSelect || !usuarioSelect) return;
+            if (!rolSelect || !usuarioSelect) return;
 
-        let fechasDisponibles = [];
+            let fechasDisponibles = [];
 
-        rolSelect.addEventListener('change', async () => {
-            const rolId = rolSelect.value;
-            usuarioSelect.innerHTML = '<option>Cargando...</option>';
+            rolSelect.addEventListener('change', async () => {
+                const rolId = rolSelect.value;
+                usuarioSelect.innerHTML = '<option>Cargando...</option>';
 
-            if (rolId) {
-                const res = await fetch(`/usuarios-por-rol/${rolId}`);
-                const usuarios = await res.json();
+                if (rolId) {
+                    const res = await fetch(`/usuarios-por-rol/${rolId}`);
+                    if (!res.ok) {
+                        console.error('Error al obtener usuarios por rol');
+                        usuarioSelect.innerHTML = '<option value="">Error al cargar</option>';
+                        return;
+                    }
+                    const usuarios = await res.json();
 
-                usuarioSelect.innerHTML = '<option value="">Seleccione</option>';
-                usuarios.forEach(user => {
-                    const opt = document.createElement('option');
-                    opt.value = user.id;
-                    opt.textContent = `${user.name} (${user.email})`;
-                    usuarioSelect.appendChild(opt);
-                });
-            }
-        });
-
-        usuarioSelect.addEventListener('change', async () => {
-            const userId = usuarioSelect.value;
-            const fechaInput = document.getElementById('fecha_reunion');
-            const horaInput = document.getElementById('hora_reunion');
-
-            if (!fechaInput || !horaInput) return;
-
-            fechaInput.disabled = true;
-            horaInput.disabled = true;
-            horaInput.innerHTML = '';
-
-            if (userId) {
-                const res = await fetch(`/disponibilidad-fechas/${userId}`);
-                fechasDisponibles = await res.json();
-
-                if (fechasDisponibles.length > 0) {
-                    fechaInput.disabled = false;
-
-                    fechaInput.addEventListener('input', async () => {
-                        const seleccionada = fechaInput.value;
-                        if (fechasDisponibles.includes(seleccionada)) {
-                            horaInput.disabled = false;
-
-                            const resHoras = await fetch('/horas-disponibles', {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json',
-                                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                                },
-                                body: JSON.stringify({
-                                    usuario_id: userId,
-                                    fecha: seleccionada
-                                })
-                            });
-
-                            const horas = await resHoras.json();
-
-                            horaInput.innerHTML = '<option value="">Seleccione</option>';
-                            horas.forEach(h => {
-                                const opt = document.createElement('option');
-                                opt.value = h;
-                                opt.textContent = h;
-                                horaInput.appendChild(opt);
-                            });
-                        } else {
-                            horaInput.disabled = true;
-                            horaInput.innerHTML = '<option value="">Fuera del rango</option>';
-                        }
+                    usuarioSelect.innerHTML = '<option value="">Seleccione</option>';
+                    usuarios.forEach(user => {
+                        const opt = document.createElement('option');
+                        opt.value = user.id;
+                        opt.textContent = `${user.name} (${user.email})`;
+                        usuarioSelect.appendChild(opt);
                     });
-                } else {
-                    fechaInput.disabled = true;
-                    horaInput.disabled = true;
-                    fechaInput.value = '';
-                    horaInput.innerHTML = '<option>No hay fechas disponibles</option>';
                 }
-            }
-        });
-    }
-</script>
+            });
+
+            usuarioSelect.addEventListener('change', async () => {
+                const userId = usuarioSelect.value;
+                const fechaInput = document.getElementById('fecha_reunion');
+                const horaInput = document.getElementById('hora_reunion');
+
+                if (!fechaInput || !horaInput) return;
+
+                fechaInput.disabled = true;
+                horaInput.disabled = true;
+                horaInput.innerHTML = '';
+
+                if (userId) {
+                    const res = await fetch(`/disponibilidad-fechas/${userId}`);
+                    if (!res.ok) {
+                        console.error('Error al obtener fechas disponibles');
+                        fechaInput.disabled = true;
+                        horaInput.disabled = true;
+                        usuarioSelect.value = '';
+                        return;
+                    }
+                    fechasDisponibles = await res.json();
+
+                    if (fechasDisponibles.length > 0) {
+                        fechaInput.disabled = false;
+
+                        fechaInput.addEventListener('input', async () => {
+                            const seleccionada = fechaInput.value;
+                            if (fechasDisponibles.includes(seleccionada)) {
+                                horaInput.disabled = false;
+
+                                const resHoras = await fetch('/horas-disponibles', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                                    },
+                                    body: JSON.stringify({
+                                        usuario_id: userId,
+                                        fecha: seleccionada
+                                    })
+                                });
+                                if (!resHoras.ok) {
+                                    console.error('Error al obtener horas disponibles');
+                                    horaInput.disabled = true;
+                                    horaInput.innerHTML = '<option value="">Error</option>';
+                                    return;
+                                }
+
+                                const horas = await resHoras.json();
+
+                                horaInput.innerHTML = '<option value="">Seleccione</option>';
+                                horas.forEach(h => {
+                                    const opt = document.createElement('option');
+                                    opt.value = h;
+                                    opt.textContent = h;
+                                    horaInput.appendChild(opt);
+                                });
+                            } else {
+                                horaInput.disabled = true;
+                                horaInput.innerHTML = '<option value="">Fuera del rango</option>';
+                            }
+                        });
+                    } else {
+                        fechaInput.disabled = true;
+                        horaInput.disabled = true;
+                        fechaInput.value = '';
+                        horaInput.innerHTML = '<option>No hay fechas disponibles</option>';
+                    }
+                }
+            });
+        }
+    </script>
 
 
 </x-app-layout>

@@ -44,7 +44,7 @@ class SolicitudController extends Controller
     {
         DB::beginTransaction();
         try {
-            $solicitud = Solicitud::create([
+            $solicitudModel = Solicitud::create([
                 'tipo_id' => $request->tipo_id,
                 'estado' => 'pendiente',
                 'fecha' => now(),
@@ -62,18 +62,19 @@ class SolicitudController extends Controller
                     'motivo' => 'required|string|max:255',
                 ]);
 
+                $duracionMinutos = (int) $request->input('duracion_minutos');
                 $fechaHoraInicio = Carbon::parse($request->input('fecha_reunion') . ' ' . $request->input('hora_reunion'));
-                $fechaHoraFin = $fechaHoraInicio->copy()->addMinutes($request->input('duracion_minutos'));
+                 $fechaHoraFin = (clone $fechaHoraInicio)->addMinutes($duracionMinutos);
 
                 // Guardar en BD
                 SReunion::create([
-                    'solicitud_id'      => $solicitud->id,
+                    'id'      => $solicitudModel->id,
                     'destinatario_id'   => $request->input('destinatario_id'),
                     'motivo'            => $request->input('motivo'),
                     'calendario'        => $request->input('calendario'),
                     'prioridad'         => $request->input('prioridad'),
                     'fecha_hora_inicio' => $fechaHoraInicio,
-                    'duracion_minutos'  => $request->input('duracion_minutos'),
+                    'duracion_minutos'  => $duracionMinutos,
                 ]);
 
                 // Obtener destinatario
